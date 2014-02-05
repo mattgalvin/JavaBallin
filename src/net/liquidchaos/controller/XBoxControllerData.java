@@ -11,8 +11,11 @@ public class XBoxControllerData {
 
 	private int rightAngle;
 	private float rightRadius;
+	
+	private boolean leftButtonPressed;
+	private boolean rightButtonPressed;
 
-	public XBoxControllerData(float leftX, float leftY, float rightX, float rightY) {
+	public XBoxControllerData(float leftX, float leftY, float rightX, float rightY, boolean leftButton, boolean rightButton) {
 		leftStickX = leftX;
 		leftStickY = leftY;
 		rightStickX = rightX;
@@ -25,6 +28,9 @@ public class XBoxControllerData {
 		double rightAngleD = Math.toDegrees(Math.atan2(rightX, rightY));
 		rightAngle = (int)(rightAngleD < 0.0f ? 360.0f + rightAngleD : rightAngleD);
 		rightRadius = (float)Math.sqrt(Math.pow(rightX, 2) + Math.pow(rightY, 2));
+		
+		this.leftButtonPressed = leftButton;
+		this.rightButtonPressed = rightButton;
 	}
 
 	public float getLeftStickX() {
@@ -58,4 +64,14 @@ public class XBoxControllerData {
 	public float getRightRadius() {
 		return rightRadius;
 	}
+
+	public boolean isLeftButtonPressed() {
+		return leftButtonPressed;
+	}
+
+	public boolean isRightButton() {
+		return rightButtonPressed;
+	}
+	
+	
 }
