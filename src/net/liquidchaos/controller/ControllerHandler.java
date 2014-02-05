@@ -49,9 +49,10 @@ public class ControllerHandler extends Observable implements Runnable  {
 				float y = controller.getComponent(Identifier.Axis.Y).getPollData();
 				float rx = controller.getComponent(Identifier.Axis.RX).getPollData();
 				float ry = controller.getComponent(Identifier.Axis.RY).getPollData();
-				
-				XBoxControllerData data = new XBoxControllerData(x, y, rx, ry);
-				logger.trace(String.format("Left (%.2f, %d)\tRight (%.2f, %d)", data.getLeftRadius(), data.getLeftAngle(), data.getRightRadius(), data.getRightAngle()));
+				boolean leftButton = controller.getComponent(Identifier.Button.LEFT_THUMB).getPollData() == 1.0f ? true : false;
+				boolean rightButton = controller.getComponent(Identifier.Button.RIGHT_THUMB).getPollData() == 1.0f ? true : false;
+				XBoxControllerData data = new XBoxControllerData(x, y, rx, ry, leftButton, rightButton);
+				logger.trace(String.format("Left (%.2f, %d)\tRight (%.2f, %d), LB: %s, RB: %s", data.getLeftRadius(), data.getLeftAngle(), data.getRightRadius(), data.getRightAngle(), leftButton, rightButton));
 
 				setChanged();
 				notifyObservers(data);
