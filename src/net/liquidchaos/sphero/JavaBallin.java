@@ -1,5 +1,6 @@
 package net.liquidchaos.sphero;
 
+import java.awt.Color;
 import java.io.IOException;
 import java.util.Observable;
 import java.util.Observer;
@@ -35,6 +36,8 @@ public class JavaBallin implements Observer {
 	private Label spheroHeading;
 	private XBoxControllerData controllerData;
 	private int spheroState = 0; // 0 - nothing, 1 - set heading, 2 - roll
+	private int speed;
+	private int heading;
 	
 	private Sphero sphero;
 	private ControllerHandler controller;
@@ -131,20 +134,6 @@ public class JavaBallin implements Observer {
 		    }
 		}); 
 		
-		Button buttonXbox = new Button(buttonHolder, SWT.PUSH);
-		buttonXbox.setText("Start XBox Controller");
-
-		buttonXbox.addSelectionListener(new SelectionAdapter() {
-		    @Override
-		    public void widgetSelected(SelectionEvent e) {
-		    	try {
-		    		controller.start();
-		    	} catch (Exception ex) {
-		    		
-		    	}
-		    }
-		}); 
-		
 		// Center the dialog
 		Monitor primary = display.getPrimaryMonitor();
 		Rectangle bounds = primary.getBounds();
@@ -153,6 +142,12 @@ public class JavaBallin implements Observer {
 		int y = bounds.y + (bounds.height - rect.height) / 2;
 		shell.setLocation(x, y);
 
+		try {
+			controller.start();
+		} catch (Exception e) {
+			logger.error("Could not start controller.");
+		}
+		
 		shell.open();
 
 		while (!shell.isDisposed()) {
@@ -191,45 +186,66 @@ public class JavaBallin implements Observer {
 	public void update(Observable o, Object arg) {
 		if (o instanceof ControllerHandler) {
 			controllerData = (XBoxControllerData)arg;
-			
+
+	    	float rawSpeed = controllerData.getLeftRadius();
+	    	rawSpeed = rawSpeed < 0.2f ? 0.0f : rawSpeed;
+	    	rawSpeed = rawSpeed > 1.0f ? 1.0f : rawSpeed;
+	    	
+	    	speed = (int)(255.0f * rawSpeed);
+	    	
+	    	try {
+	    		if (sphero != null) {
+	    			boolean setColor = true;
+	    			
+		    		switch (spheroState) {
+		    		case 1 :
+		    			if (speed > 0) {
+		    		    	heading = 360 - controllerData.getLeftAngle();
+		    		    	heading = heading < 180 ? heading + 180 : heading - 180;
+		    				sphero.setHeading((short)heading);
+	//	    				sphero.setRoll((byte)0, (short)heading, (byte)0);
+		    				sphero.setRoll((byte)0, (short)heading, (byte)1);
+		    			}
+			    		break;
+		    		case 2 :
+		    			if (controllerData.isRightButton()) {
+			    			sphero.setLEDColor((byte)255, (byte)0, (byte)0, false);
+		    				sphero.setRoll((byte)0, (short)heading, (byte)0);
+		    				setColor = false;
+		    			} else {
+			    			if (speed == 0) {
+			    				sphero.setRoll((byte)0, (short)heading, (byte)0);
+			    			} else {
+			    		    	heading = 360 - controllerData.getLeftAngle();
+			    		    	heading = heading < 180 ? heading + 180 : heading - 180;
+			    				sphero.setRoll((byte)speed, (short)heading, (byte)1);
+			    			}
+		    			}
+			    		break;
+			    	default :
+			    		break;
+		    		}
+		    		
+		    		if (setColor) {
+			    		float h = controllerData.getRightAngle()/360.0f;
+			    		float s = controllerData.getRightRadius() > 1.0f ? 1.0f : controllerData.getRightRadius();
+			    		float v = 1.0f;
+		    		
+		    			Color c = Color.getHSBColor(h,s,v);
+		    			sphero.setLEDColor((byte)c.getRed(), (byte)c.getGreen(), (byte)c.getBlue(), false);
+		    		}
+	    		}
+	    	} catch (IOException ioe) {
+	    		
+	    	}
+
 			Display.getDefault().asyncExec(new Runnable() {
 			    public void run() {
-			    	int speed = (int)(100.0f * controllerData.getLeftRadius());
-			    	
-			    	if (speed <= 20) { speed = 0; }
-			    	if (speed > 100) { speed = 100; }
-			    	
-			    	int heading = 360 - controllerData.getLeftAngle();
-			    	heading = heading < 180 ? heading + 180 : heading - 180;
-			    	
 			    	spheroSpeed.setText(String.format("%d", speed));
 			    	spheroHeading.setText(String.format("%d", heading));
 			    	
 			    	spheroSpeed.setSize(50, spheroName.getSize().y);
 			    	spheroHeading.setSize(50, spheroName.getSize().y);
-			    	
-			    	try {
-			    		switch (spheroState) {
-			    		case 1 :
-			    			if (speed > 0) {
-			    				sphero.setRoll((byte)0, (short)heading, (byte)1);
-			    				sphero.setHeading((short)heading);
-			    				sphero.setRoll((byte)0, (short)heading, (byte)0);
-			    			}
-				    		break;
-			    		case 2 :
-			    			if (speed == 0) {
-			    				sphero.setRoll((byte)0, (short)heading, (byte)0);
-			    			} else {
-			    				sphero.setRoll((byte)speed, (short)heading, (byte)1);
-			    			}
-				    		break;
-				    	default :
-				    		break;
-			    		}
-			    	} catch (IOException ioe) {
-			    		
-			    	}
 			    }
 			});
 		}
